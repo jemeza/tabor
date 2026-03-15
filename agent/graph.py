@@ -10,7 +10,7 @@ import os
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 from agent.tools import get_tools
 
@@ -139,10 +139,10 @@ def build_agent(
         ]
     )
 
-    return create_react_agent(
+    return create_agent(
         model=llm,
         tools=tools,
-        prompt=system_message,
+        system_prompt=system_message,
     )
 
 
