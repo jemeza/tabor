@@ -9,7 +9,7 @@ Uses create_react_agent (ReAct pattern) with:
 import os
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 from agent.tools import get_tools
@@ -125,10 +125,24 @@ def build_agent(
 
     tools = get_tools(max_results=max_search_results)
 
+    # Wrap the system prompt with cache_control so Anthropic caches it on the
+    # first request and reuses the cache on subsequent calls (~90% cheaper for
+    # the prompt tokens). The prompt is large and never changes at runtime,
+    # making it an ideal cache candidate.
+    system_message = SystemMessage(
+        content=[
+            {
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+    )
+
     return create_react_agent(
         model=llm,
         tools=tools,
-        prompt=SYSTEM_PROMPT,
+        prompt=system_message,
     )
 
 
