@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-Taber — Stock & ETF Research Agent
+Tabor — Stock & ETF Research Agent
 
 Usage:
     python main.py "Analyze the SPDR S&P 500 ETF (SPY)"
-    python main.py --query "Compare MSFT and GOOGL"
     python main.py --interactive
 """
 
-import argparse
 import sys
 
+import click
 from dotenv import load_dotenv
 
 # Must load .env before agent imports so API keys are available at instantiation
@@ -18,75 +17,87 @@ load_dotenv()
 
 from agent import build_agent, run_agent  # noqa: E402
 
+BANNER = """\
+╔══════════════════════════════════════════╗
+║        Tabor Research Agent              ║
+║  Catholic SRI · Stocks · ETFs            ║
+╚══════════════════════════════════════════╝"""
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="taber",
-        description="Stock and ETF research agent powered by Claude + Tavily",
-    )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("query", nargs="?", help="Research query (positional)")
-    group.add_argument("--query", "-q", dest="query_flag", metavar="QUERY",
-                       help="Research query (named flag)")
-    parser.add_argument("--interactive", "-i", action="store_true",
-                        help="Run in interactive REPL mode")
-    parser.add_argument("--stream", "-s", action="store_true", default=True,
-                        help="Stream output as generated (default: True)")
-    parser.add_argument("--no-stream", action="store_false", dest="stream",
-                        help="Wait for full response before printing")
-    parser.add_argument("--model", "-m", default="claude-sonnet-4-6",
-                        help="Claude model to use (default: claude-sonnet-4-6)")
-    return parser.parse_args()
+DIVIDER = "─" * 60
 
 
-def run_interactive(agent, stream: bool) -> None:
-    print("Taber Research Agent — type 'exit' or 'quit' to stop.\n")
-    while True:
-        try:
-            query = input("Research query: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nExiting.")
-            break
-        if not query:
-            continue
-        if query.lower() in {"exit", "quit", "q"}:
-            print("Goodbye.")
-            break
-        print("\n--- Research Results ---")
+def _run_query(agent, query: str, stream: bool) -> None:
+    """Execute a single query and print results."""
+    try:
         result = run_agent(query, agent=agent, stream=stream)
         if not stream:
-            print(result)
-        print("\n" + "─" * 60 + "\n")
-
-
-def main() -> None:
-    args = parse_args()
-    query = args.query or getattr(args, "query_flag", None)
-
-    if not query and not args.interactive:
-        print(
-            "Error: provide a query as a positional argument, "
-            "with --query/-q, or use --interactive/-i for REPL mode.",
-            file=sys.stderr,
-        )
+            click.echo(result)
+    except Exception as e:
+        click.secho(f"Agent error: {e}", fg="red", err=True)
         sys.exit(1)
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.argument("query", required=False)
+@click.option("--interactive", "-i", is_flag=True,
+              help="Run in interactive REPL mode.")
+@click.option("--stream/--no-stream", "-s/-S", default=True, show_default=True,
+              help="Stream output as it is generated.")
+@click.option("--model", "-m", default="claude-sonnet-4-6", show_default=True,
+              metavar="MODEL", help="Claude model to use.")
+@click.version_option(version="0.1.0", prog_name="tabor")
+def main(query: str | None, interactive: bool, stream: bool, model: str) -> None:
+    """Tabor — Stock & ETF research powered by Claude + Tavily.
+
+    Provide a QUERY directly, or pass --interactive / -i for a REPL session.
+
+    \b
+    Examples:
+      tabor "Analyze SPY"
+      tabor --interactive
+      tabor -i --no-stream
+    """
+    if not query and not interactive:
+        raise click.UsageError(
+            "Provide a QUERY argument or use --interactive / -i for REPL mode."
+        )
 
     try:
-        agent = build_agent(model_name=args.model)
+        agent = build_agent(model_name=model)
     except EnvironmentError as e:
-        print(f"Configuration error: {e}", file=sys.stderr)
+        click.secho(f"Configuration error: {e}", fg="red", err=True)
         sys.exit(1)
 
-    if args.interactive:
-        run_interactive(agent, stream=args.stream)
+    if interactive:
+        click.secho(BANNER, fg="cyan", bold=True)
+        click.echo()
+        click.secho("Type 'exit', 'quit', or Ctrl-C to stop.\n", dim=True)
+
+        while True:
+            try:
+                query_input = click.prompt(
+                    click.style("Research query", fg="green", bold=True),
+                    prompt_suffix=" › ",
+                )
+            except (click.Abort, EOFError):
+                click.echo()
+                click.secho("Goodbye.", fg="yellow")
+                break
+
+            query_input = query_input.strip()
+            if not query_input:
+                continue
+            if query_input.lower() in {"exit", "quit", "q"}:
+                click.secho("Goodbye.", fg="yellow")
+                break
+
+            click.echo()
+            click.secho("Research Results", fg="cyan", bold=True)
+            click.secho(DIVIDER, dim=True)
+            _run_query(agent, query_input, stream)
+            click.secho(DIVIDER + "\n", dim=True)
     else:
-        try:
-            result = run_agent(query, agent=agent, stream=args.stream)
-            if not args.stream:
-                print(result)
-        except Exception as e:
-            print(f"Agent error: {e}", file=sys.stderr)
-            sys.exit(1)
+        _run_query(agent, query, stream)
 
 
 if __name__ == "__main__":
