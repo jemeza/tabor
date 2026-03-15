@@ -121,6 +121,7 @@ def build_agent(
         model=model_name,
         temperature=temperature,
         max_tokens=4096,
+        model_kwargs={"cache_control": {"type": "ephemeral"}},
     )
 
     tools = get_tools(max_results=max_search_results)
@@ -134,7 +135,6 @@ def build_agent(
             {
                 "type": "text",
                 "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
             }
         ]
     )
