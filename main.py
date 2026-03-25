@@ -3,10 +3,12 @@
 Tabor — Stock & ETF Research Agent
 
 Usage:
-    python main.py "Analyze the SPDR S&P 500 ETF (SPY)"
-    python main.py --interactive
+    tabor run "Analyze the SPDR S&P 500 ETF (SPY)"
+    tabor run --interactive
+    tabor deploy
 """
 
+import subprocess
 import sys
 
 import click
@@ -37,7 +39,13 @@ def _run_query(agent, query: str, stream: bool) -> None:
         sys.exit(1)
 
 
-@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(version="0.1.0", prog_name="tabor")
+def cli():
+    """Tabor — Stock & ETF research powered by Claude + Tavily."""
+
+
+@cli.command()
 @click.argument("query", required=False)
 @click.option("--interactive", "-i", is_flag=True,
               help="Run in interactive REPL mode.")
@@ -45,17 +53,16 @@ def _run_query(agent, query: str, stream: bool) -> None:
               help="Stream output as it is generated.")
 @click.option("--model", "-m", default="claude-sonnet-4-6", show_default=True,
               metavar="MODEL", help="Claude model to use.")
-@click.version_option(version="0.1.0", prog_name="tabor")
-def main(query: str | None, interactive: bool, stream: bool, model: str) -> None:
-    """Tabor — Stock & ETF research powered by Claude + Tavily.
+def run(query: str | None, interactive: bool, stream: bool, model: str) -> None:
+    """Run a research query against the Tabor agent.
 
     Provide a QUERY directly, or pass --interactive / -i for a REPL session.
 
     \b
     Examples:
-      tabor "Analyze SPY"
-      tabor --interactive
-      tabor -i --no-stream
+      tabor run "Analyze SPY"
+      tabor run --interactive
+      tabor run -i --no-stream
     """
     if not query and not interactive:
         raise click.UsageError(
@@ -100,5 +107,32 @@ def main(query: str | None, interactive: bool, stream: bool, model: str) -> None
         _run_query(agent, query, stream)
 
 
+@cli.command()
+def deploy() -> None:
+    """Deploy the Tabor agent to Modal.
+
+    Requires the Modal CLI to be installed and authenticated.
+    API keys are read from your local .env file via modal.Secret.from_dotenv().
+
+    \b
+    Prerequisites:
+      pip install modal
+      modal setup
+
+    \b
+    Example:
+      tabor deploy
+    """
+    click.secho("Deploying Tabor agent to Modal...", fg="cyan", bold=True)
+    result = subprocess.run(
+        ["modal", "deploy", "modal_app.py"],
+        check=False,
+    )
+    sys.exit(result.returncode)
+
+
+# Keep `python main.py` working
+main = cli
+
 if __name__ == "__main__":
-    main()
+    cli()
