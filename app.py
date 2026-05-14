@@ -192,11 +192,16 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')�
                             if msg.tool_call_id not in seen_tool_ids:
                                 seen_tool_ids.add(msg.tool_call_id)
                                 formatted = format_tool_results(msg.content)
+                                matched_query = ""
                                 for step in steps:
                                     if step["id"] == msg.tool_call_id:
                                         step["results"] = formatted
+                                        matched_query = step["query"]
                                         break
-                                st.write("✅ Results received")
+                                with st.expander(
+                                    f"🔍 Searched: *{matched_query}*", expanded=True
+                                ):
+                                    st.markdown(formatted)
 
                     # Stream the final AI text as it grows
                     last_msg = messages[-1] if messages else None
