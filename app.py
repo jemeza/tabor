@@ -158,8 +158,6 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
     seen_tool_ids: set[str] = set()
 
     with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-
         inputs = {"messages": [HumanMessage(content=user_input)]}
 
         try:
@@ -177,7 +175,6 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
                                         "query",
                                         tc["args"].get("q", str(tc["args"])),
                                     )
-                                    st.write(f"üîç Searching: **{query}**")
                                     steps.append(
                                         {
                                             "type": "search",
@@ -199,11 +196,11 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
                                         matched_query = step["query"]
                                         break
                                 with st.expander(
-                                    f"üîç Searched: *{matched_query}*", expanded=True
+                                    f"üîç Searched: *{matched_query}*", expanded=False
                                 ):
                                     st.markdown(formatted)
 
-                    # Stream the final AI text as it grows
+                    # Accumulate the final AI text
                     last_msg = messages[-1] if messages else None
                     if (
                         last_msg is not None
@@ -213,7 +210,6 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
                         text = extract_text(last_msg.content)
                         if text and text != full_response:
                             full_response = text
-                            response_placeholder.markdown(full_response + "‚ñå")
 
                 n = len(steps)
                 label = f"Research complete ¬∑ {n} search{'es' if n != 1 else ''}"
@@ -223,7 +219,7 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
             st.error(f"Agent error: {e}")
             full_response = f"*(Error: {e})*"
 
-        response_placeholder.markdown(full_response)
+        st.markdown(full_response)
 
     # Save to history for subsequent reruns
     st.session_state.history.append(
