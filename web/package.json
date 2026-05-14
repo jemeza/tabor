@@ -1,0 +1,32 @@
+{
+  "name": "tabor-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tailwindcss -i app/tailwind.css -o public/tailwind.css --minify && remix vite:build",
+    "dev": "concurrently \"remix vite:dev\" \"tailwindcss -w -i app/tailwind.css -o public/tailwind.css\"",
+    "start": "remix-serve ./build/server/index.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@remix-run/node": "^2.16.3",
+    "@remix-run/react": "^2.16.3",
+    "@remix-run/serve": "^2.16.3",
+    "isbot": "^4.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.16.3",
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.5"
+  }
+}
