@@ -156,6 +156,9 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
     full_response = ""
     seen_tc_ids: set[str] = set()
     seen_tool_ids: set[str] = set()
+    # Keyed by tool-call id; holds the st.empty() slot for each pending search.
+    # Kept separate from `steps` so Streamlit objects don't end up in session state.
+    step_slots: dict[str, object] = {}
 
     with st.chat_message("assistant"):
         inputs = {"messages": [HumanMessage(content=user_input)]}
@@ -175,6 +178,9 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
                                         "query",
                                         tc["args"].get("q", str(tc["args"])),
                                     )
+                                    slot = st.empty()
+                                    slot.write(f"üîç Searching: **{query}**")
+                                    step_slots[tc["id"]] = slot
                                     steps.append(
                                         {
                                             "type": "search",
@@ -195,10 +201,14 @@ if user_input := st.chat_input("Ask about a stock or ETF (e.g. 'Analyze AAPL')‚Ä
                                         step["results"] = formatted
                                         matched_query = step["query"]
                                         break
-                                with st.expander(
-                                    f"üîç Searched: *{matched_query}*", expanded=False
-                                ):
-                                    st.markdown(formatted)
+                                slot = step_slots.get(msg.tool_call_id)
+                                if slot is not None:
+                                    with slot.container():
+                                        with st.expander(
+                                            f"üîç Searched: *{matched_query}*",
+                                            expanded=False,
+                                        ):
+                                            st.markdown(formatted)
 
                     # Accumulate the final AI text
                     last_msg = messages[-1] if messages else None
